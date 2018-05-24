@@ -30,13 +30,13 @@ p <- p %>% filter (first_child_yob>1939 | ( is.na(first_child_yob) & kids==0 ))
 # select variables
 p <- p %>% select("lotta","age","brothers","sisters","agriculture","never_married","education")
 
-p<- p[complete.cases(p),]
+p1<- p[complete.cases(p),]
 
 ################## DREDGE MODEL RANK ####################
 options(na.action = "na.fail") 
 
 model<-glm(lotta ~  age +
-            education + agriculture  + brothers+sisters+never_married, data=p,
+            education + agriculture  + brothers+sisters+never_married, data=p1,
            family = binomial)
 modelset<-dredge(model, rank = AICc, trace=FALSE) 
 summary(modelset)
@@ -52,13 +52,13 @@ summary(topmodel, type = "response")
 # Rethinking code for Bayesian analysis###############
 #####################################################
 data_list <- list(
-  lotta  = p$lotta,
-  age = p$age,
-  sons = p$brothers,
-  daughters = p$sisters,
-  agriculture = p$agriculture,
-  education = p$education,
-  never_married = p$never_married)
+  lotta  = p1$lotta,
+  age = p1$age,
+  sons = p1$brothers,
+  daughters = p1$sisters,
+  agriculture = p1$agriculture,
+  education = p1$education,
+  never_married = p1$never_married)
 
 model <- map2stan(
   alist(
@@ -121,7 +121,7 @@ p <- p %>% filter (age>18)
 p <- p %>% select("lotta","age","sons","daughters","agriculture","returnedkarelia","outbred2",
                          "education","servedduringwar_husband","injuredinwar_husband","never_married")
 
-p<- p[complete.cases(p),]
+p2<- p[complete.cases(p),]
 
 ################## DREDGE MODEL RANK ####################
 options(na.action = "na.fail") 
@@ -144,15 +144,18 @@ summary(topmodel, type = "response")
 ## Rethinking Bayes code for model 2 #################################
 ##################################################################
 data_list <- list(
-  lotta  = p$lotta,
-  age = p$age,
-  sons = p$sons,
-  daughters = p$daughters,
-  agriculture = p$agriculture,
-  education = p$education,
-  served = p$servedduringwar_husband,
-  injured = p$injuredinwar_husband,
-  never_married = p$never_married)
+  lotta  = p2$lotta,
+  age = p2$age,
+  sons = p2$sons,
+  daughters = p2$daughters,
+  agriculture = p2$agriculture,
+  education = p2$education,
+  served = p2$servedduringwar_husband,
+  injured = p2$injuredinwar_husband,
+  returnedkarelia =p2$returnedkarelia,
+  outbred = p2$outbred2,
+  
+  never_married = p2$never_married)
 
 model <- map2stan(
   alist(
@@ -166,15 +169,17 @@ model <- map2stan(
       bed*education +
       bserv*served+
       binj*injured+
+      bo*outbred +
+      brk*returnedkarelia +
       bnm*never_married,
     
     sigma ~ dcauchy(0,1),
     a ~ dnorm (0,10),
     # priors for all slopes (b terms) in main model
-    c(ba,bs,bd,bag,bed,bserv,binj,bnm) ~ dnorm(0,1)
+    c(ba,bs,bd,bag,bed,bserv,binj,bnm,bo,brk) ~ dnorm(0,1)
   ),
   data=data_list, iter=8000, warmup=2000, control=list(max_treedepth=20),
-  start=list(ba=0,bs=0,bd=0,bag=0,bed=0,bserv=0,binj=0,bnm=0), chains =4, cores=4)
+  start=list(ba=0,bs=0,bd=0,bag=0,bed=0,bserv=0,binj=0,bnm=0,bo=0,brk=0), chains =4, cores=4)
 
 path<- (paste0("results/"))
 filename <- "lottas_married_or_had kids before_1940_or never married_2.rds"
@@ -215,13 +220,13 @@ p <- p %>% filter (age>18 & emancipated_kids==1)
 p <- p %>% select("lotta","age","sons","daughters","agriculture",
                          "education","servedduringwar_husband","injuredinwar_husband","never_married")
 
-p<- p[complete.cases(p),]
+p3<- p[complete.cases(p),]
 
 ####Model Ranks Dredge#####################
 options(na.action = "na.fail") 
 
 model<-glm(lotta ~  age +sons+daughters+ agriculture+education+
-             servedduringwar_husband+injuredinwar_husband+never_married, data=model_2,
+             servedduringwar_husband+injuredinwar_husband+never_married, data=p3,
            family = binomial)
 modelset<-dredge(model, rank = AICc, trace=FALSE)
 summary(modelset)
@@ -311,3 +316,59 @@ filename <- "lottas_emancipated_kids.rds"
 
 saveRDS(model, paste0(path, filename))
 
+############################################################################################
+###########################################################################################
+# get model predictions for absolute effects for each prediction
+
+#Load the 3 models
+mod_1 <- readRDS("C:/Users/rofrly/Dropbox/Github/Lottas/Models/Model_1.rds")
+mod_2 <- readRDS("C:/Users/rofrly/Dropbox/Github/Lottas/Models/Model_2.rds")
+mod_3 <- readRDS("C:/Users/rofrly/Dropbox/Github/Lottas/Models/Model_3.rds")
+# Model 1
+attach(p1)
+lottas_1 <- tidyr::crossing(
+  age = mean(age),
+  #outbred = mean (outbred),# the "L" makes the value an integer, avoiding possible errors
+  age = mean(age),
+  brothers = 0L,
+  sisters=mean(sisters),
+  agriculture=mean(agriculture),
+  education = mean(education),
+  never_married = mean(never_married)) %>%
+  as.data.frame()
+detach(p1)
+
+link_1 <- link(mod_1, data=lottas_1)
+# get means
+mu <- apply(link_1,2,mean)
+#get PI's'
+pi <- t(apply(link_1,2, PI))
+
+mu
+pi
+
+# Model 2
+attach(p2)
+lottas_2 <- tidyr::crossing(
+  age = mean(age),
+  #outbred = mean (outbred),# the "L" makes the value an integer, avoiding possible errors
+  sons = mean(sons),
+  daughters=mean(daughters),
+  agriculture=mean(agriculture),
+  education=mean(education),
+  served=mean(servedduringwar_husband),
+  injured=mean(injuredinwar_husband),
+  returnedkarelia = 1L,
+  never_married = mean(never_married),
+  outbred = mean(outbred2)) %>%
+  as.data.frame()
+detach(p2)
+
+link_2 <- link(mod_2, data=lottas_2)
+# get means
+mu <- apply(link_2,2,mean)
+#get PI's'
+pi <- t(apply(link_2,2, PI))
+
+mu
+pi
