@@ -105,6 +105,7 @@ p$servedduringwar_husband<- as.numeric(p$servedduringwar_husband)
 p$servedduringwar_husband[p$never_married==1]<- 0
 p$injuredinwar_husband<- as.numeric(p$injuredinwar_husband)
 p$injuredinwar_husband[p$never_married==1]<- 0
+p$outbred2 <- ifelse(p$outbred==0 | is.na(p$outbred), 0, 1)
 # add age in 1944
 p$age <- 1944-p$birthyear
 # kids over 18 by 1944
@@ -117,7 +118,7 @@ p <- p %>% filter (age_at_first_birth > 12 & age_at_first_birth < 51 | is.na(age
 p <- p %>% filter (weddingyear<1940 |  never_married==1 | first_child_yob<1940 )
 p <- p %>% filter (age>18)
 # select complete cases for models
-p <- p %>% select("lotta","age","sons","daughters","agriculture",
+p <- p %>% select("lotta","age","sons","daughters","agriculture","returnedkarelia","outbred2",
                          "education","servedduringwar_husband","injuredinwar_husband","never_married")
 
 p<- p[complete.cases(p),]
@@ -125,7 +126,7 @@ p<- p[complete.cases(p),]
 ################## DREDGE MODEL RANK ####################
 options(na.action = "na.fail") 
 
-model<-glm(lotta ~  age +sons+daughters+ agriculture+education+
+model<-glm(lotta ~  age +sons+daughters+ agriculture+education+outbred2+returnedkarelia+
              servedduringwar_husband+injuredinwar_husband+never_married, data=p,
            family = binomial)
 modelset<-dredge(model, rank = AICc, trace=FALSE)
@@ -176,7 +177,7 @@ model <- map2stan(
   start=list(ba=0,bs=0,bd=0,bag=0,bed=0,bserv=0,binj=0,bnm=0), chains =4, cores=4)
 
 path<- (paste0("results/"))
-filename <- "lottas_married_or_had kids before_1940_or never married.rds"
+filename <- "lottas_married_or_had kids before_1940_or never married_2.rds"
 
 saveRDS(model, paste0(path, filename))
 
