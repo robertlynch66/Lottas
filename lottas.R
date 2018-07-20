@@ -346,7 +346,7 @@ pi <- t(apply(link_1,2, PI))
 
 mu
 pi
-
+#bullshit
 # Model 2
 attach(p2)
 lottas_2 <- tidyr::crossing(
@@ -370,5 +370,7 @@ mu <- apply(link_2,2,mean)
 #get PI's'
 pi <- t(apply(link_2,2, PI))
 
-mu
-pi
+
+# new changes
+##################################
+# change data to long form with age and year in seperate columns
