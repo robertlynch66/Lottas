@@ -5,7 +5,8 @@ library(tidybayes)
 library(bayesplot)
 
 # make original data data frames
-path <- "C:/Users/rofrly/Dropbox/Working papers/R data files/"
+
+path <- "C:/Users/rofrly/Dropbox/"
 file2<- "person_data.rds"
 p <- readRDS(paste0(path, file2))
 library(dplyr)
@@ -36,7 +37,7 @@ model_1<- p[complete.cases(p),]
 
 
 #model 2
-path <- "C:/Users/rofrly/Dropbox/Working papers/R data files/"
+path <- "C:/Users/rofrly/Dropbox/"
 file2<- "person_data.rds"
 p <- readRDS(paste0(path, file2))
 library(dplyr)
@@ -70,7 +71,7 @@ p <- p %>% select("lotta","age","sons","daughters","agriculture","returnedkareli
 model_2<- p[complete.cases(p),]
 
 # Model 3
-path <- "C:/Users/rofrly/Dropbox/Working papers/R data files/"
+path <- "C:/Users/rofrly/Dropbox/"
 file2<- "person_data.rds"
 p <- readRDS(paste0(path, file2))
 library(dplyr)
@@ -170,7 +171,7 @@ m1 <- big_data1 %>% ggplot (aes(y= model)) +
   scale_x_discrete(name="",limits=c(0,1), labels=c("",""))+
   coord_cartesian(xlim = c(0, 1)) +
   scale_y_discrete(name="",limits=c(1),breaks=c("1"),
-                   labels=c("Model 1\nMarried before the war"))+ 
+                   labels=c("The impact of brothers"))+ 
   #ggtitle("Posterior Predictive Check")+
   scale_linetype_manual("", values=c("observations\n mean and sd"=1))+
   theme(axis.text.x=element_text(size=12, face="bold"),
@@ -195,7 +196,7 @@ m2 <- big_data2 %>% ggplot (aes(y= model)) +
   scale_x_discrete(name="",limits=c(0,1), labels=c("",""))+
   coord_cartesian(xlim = c(0, 1)) +
   scale_y_discrete(name="",limits=c(2),breaks=c("2"),
-                   labels=c("Model 2\nMarried after the war"))+ 
+                   labels=c("The impact of husband’s\n serving in the military"))+ 
   #ggtitle("Posterior Predictive Check")+
   scale_linetype_manual("", values=c("observations\n mean and sd"=1))+
   theme(axis.text.x=element_text(size=12, face="bold"),
@@ -223,7 +224,7 @@ m3 <- big_data3 %>% ggplot (aes(y= model)) +
   scale_x_discrete(name="",limits=c(0,1), labels=c("Not a Lotta","Lotta"))+
   coord_cartesian(xlim = c(0, 1)) +
   scale_y_discrete(name="",limits=c(3),breaks=c("3"),
-                   labels=c("Model 3\nAll children over age 17\nby 1944"))+ 
+                   labels=c("All children over age 17\nby 1944"))+ 
   #ggtitle("Posterior Predictive Check")+
   scale_linetype_manual("", values=c("observations\n mean and sd"=1))+
   theme(axis.text.x=element_text(size=12, face="bold"),
@@ -237,7 +238,7 @@ m3
 
 # join plots
 library(ggpubr)
-  PPC<- ggarrange(m1, m2, m3,nrow=3,ncol=1,
+  PPC<- ggarrange(m1, m2,nrow=3,ncol=1,
                                 labels=c("",""),
                                  common.legend=TRUE)
 PPC
