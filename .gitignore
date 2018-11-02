@@ -3,3 +3,12 @@
 .RData
 .Ruserdata
 .httr-oauth
+
+lottas_married_never_married_or_had_kids_before_1940.rds
+Model_1.rds
+Model_2.rds
+Model_3.rds
+lottas_all_predictors.rds
+lottas_emancipated_kids.rds
+lottas_married_never_married_or_had_kids_before_1940.rds
+lottas_unmarried_and_childless_in_1940_new2.rds

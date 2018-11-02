@@ -1,12 +1,15 @@
+
+library(dplyr)
+library(rethinking)
 ################################################################################################################
 ######################Model 1####################################################################
 ################################################################################################
 ################Lottas who never married or were childless or single in 1939###########
 ######################################################################################
-path <- "C:/Users/rofrly/Dropbox/"
 
-file2<- "person_data.rds"
-p <- readRDS(paste0(path, file2))
+# go up a directory and read in from the data files folder
+
+p <- readRDS("../data files/person_data.rds")
 library(dplyr)
 library("lme4")
 library("MuMIn")
