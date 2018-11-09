@@ -9,7 +9,7 @@ library(rethinking)
 
 # go up a directory and read in from the data files folder
 
-p <- readRDS("../data files/person_data.rds")
+p <- readRDS("../data files/person_data_old.rds")
 library(dplyr)
 library("lme4")
 library("MuMIn")
@@ -17,11 +17,11 @@ library("lsmeans")
 # convert booleans to numeric
 p$martta<- as.numeric(p$martta)
 p$lotta<- as.numeric(p$lotta)
-p$never_married <- ifelse(is.na(p$spouse_id), 1, 0)
+#p$never_married <- ifelse(is.na(p$spouse_id), 1, 0)
 # birth year must be earlier than 1920 for Katiha table and select females
 p <- p %>% filter (birthyear<1920 & sex==0)
 p$age <- 1944-p$birthyear
-
+p$age <-1940-p$birthyear
 # filter age at first birth between 13 and 50 - i.e. get rid of rows with impossible values
 p <- p %>% filter (age_at_first_birth > 12 & age_at_first_birth < 51 | is.na(age_at_first_birth))
 
@@ -32,7 +32,7 @@ p <- p %>% filter (first_child_yob>1939 | ( is.na(first_child_yob) & kids==0 ))
 
 #  run the dredge code to predict lotta service and a seperate model to predict LRS
 # select variables
-p <- p %>% select("lotta","age","brothers","sisters","agriculture","never_married","education")
+p <- p %>% select("lotta","age","agriculture","education","brothers","sisters")
 
 p1<- p[complete.cases(p),]
 
@@ -40,10 +40,10 @@ p1<- p[complete.cases(p),]
 options(na.action = "na.fail") 
 
 model<-glm(lotta ~  age +
-            education + agriculture  + brothers+sisters+never_married, data=p1,
+            education +  brothers+sisters+agriculture, data=p1,
            family = binomial)
-modelset<-dredge(model, rank = AICc, trace=FALSE) 
-summary(modelset)
+
+summary(model)
 
 
 # Model summaries################
@@ -61,8 +61,7 @@ data_list <- list(
   sons = p1$brothers,
   daughters = p1$sisters,
   agriculture = p1$agriculture,
-  education = p1$education,
-  never_married = p1$never_married)
+  education = p1$education)
 
 model <- map2stan(
   alist(
@@ -73,16 +72,15 @@ model <- map2stan(
       bb*brothers +
       bs*sisters +
       bag*agriculture +
-      bed*education +
-      bnm*never_married,
+      bed*education,
     
     sigma ~ dcauchy(0,1),
     a ~ dnorm (0,10),
     # priors for all slopes (b terms) in main model
-    c(ba,bb,bs,bag,bed,bnm) ~ dnorm(0,1)
+    c(ba,bb,bs,bag,bed) ~ dnorm(0,1)
   ),
   data=data_list, iter=8000, warmup=2000, control=list(max_treedepth=20),
-  start=list(ba=0,bs=0,bd=0,bag=0,bed=0,bserv=0,binj=0,bnm=0), chains =4, cores=4)
+  start=list(ba=0,bs=0,bd=0,bag=0,bed=0,bserv=0,binj=0), chains =4, cores=4)
 
 path<- (paste0("results/"))
 filename <- "lottas_unmarried_and_childless_in_1940.rds"
@@ -94,16 +92,16 @@ saveRDS(model, paste0(path, filename))
 #########################################################################################
 #### Women who got married before war or never married#############################################################################
 ##########################################################################################
-path <- "C:/Users/rofrly/Dropbox/"
-file2<- "person_data.rds"
-p <- readRDS(paste0(path, file2))
+p <- readRDS("../data files/person_data_old.rds")
 library(dplyr)
 library("lme4")
 library("MuMIn")
 library("lsmeans")
 # convert booleans to numeric
 p$lotta<- as.numeric(p$lotta)
-p$never_married <- ifelse(is.na(p$spouse_id), 1, 0)
+#make a single in 1945 category
+p$single_in_45 <- ifelse(p$weddingyear>1945 , 1, 0)
+
 # replace NAs with 0's for unmarrieds in husband served and husband injured cats
 p$servedduringwar_husband<- as.numeric(p$servedduringwar_husband)
 p$servedduringwar_husband[p$never_married==1]<- 0
@@ -111,19 +109,21 @@ p$injuredinwar_husband<- as.numeric(p$injuredinwar_husband)
 p$injuredinwar_husband[p$never_married==1]<- 0
 p$outbred2 <- ifelse(p$outbred==0 | is.na(p$outbred), 0, 1)
 # add age in 1944
-p$age <- 1944-p$birthyear
+p$age <- 1940-p$birthyear
 # kids over 18 by 1944
 p$emancipated_kids <- ifelse(p$last_child_yob>1927 | is.na(p$last_child_yob),0,1)
 p <- p %>% filter (sex==0)
 # filter age at first birth between 13 and 50 - i.e. get rid of rows with impossible values
 p <- p %>% filter (age_at_first_birth > 12 & age_at_first_birth < 51 | is.na(age_at_first_birth))
 
-# Women who married before 1945 or never married - exclude all the ones who got married after 1940
-p <- p %>% filter (weddingyear<1940 |  never_married==1 | first_child_yob<1940 )
+
+# Women who married before 1940 or never married - exclude all the ones who got married after 1940
+p <- p %>% filter (weddingyear<1940 |  single_in_45==1 | first_child_yob<1940)# | single_in_45==1)
 p <- p %>% filter (age>18)
 # select complete cases for models
 p <- p %>% select("lotta","age","sons","daughters","agriculture","returnedkarelia","outbred2",
-                         "education","servedduringwar_husband","injuredinwar_husband","never_married")
+                         "education","servedduringwar_husband","injuredinwar_husband",
+                  "single_in_45")
 
 p2<- p[complete.cases(p),]
 
@@ -131,10 +131,10 @@ p2<- p[complete.cases(p),]
 options(na.action = "na.fail") 
 
 model<-glm(lotta ~  age +sons+daughters+ agriculture+education+outbred2+returnedkarelia+
-             servedduringwar_husband+injuredinwar_husband+never_married, data=p,
+             servedduringwar_husband+injuredinwar_husband+single_in_45, data=p2,
            family = binomial)
 modelset<-dredge(model, rank = AICc, trace=FALSE)
-summary(modelset)
+summary(model)
 
 
 ## Model Summaries
@@ -196,7 +196,7 @@ saveRDS(model, paste0(path, filename))
 #####################################################################
 
 path <- "C:/Users/rofrly/Dropbox/"
-file2<- "person_data.rds"
+file2<- "person_data_old.rds"
 p <- readRDS(paste0(path, file2))
 library(dplyr)
 library("lme4")
@@ -252,7 +252,7 @@ library(rethinking)
 # path to the folder with the R data files
 path<- (paste0("~/r_files/"))
 
-file<- "person_data.rds"
+file<- "person_data_old.rds"
 p <- readRDS(paste0(path, file))
 
 p$lotta<- as.numeric(p$lotta)
