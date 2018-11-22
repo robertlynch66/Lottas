@@ -17,7 +17,7 @@ library("lsmeans")
 # convert booleans to numeric
 p$martta<- as.numeric(p$martta)
 p$lotta<- as.numeric(p$lotta)
-#p$never_married <- ifelse(is.na(p$spouse_id), 1, 0)
+p$never_married <- ifelse(is.na(p$spouse_id), 1, 0)
 # birth year must be earlier than 1920 for Katiha table and select females
 p <- p %>% filter (birthyear<1920 & sex==0)
 p$age <- 1944-p$birthyear
@@ -32,7 +32,7 @@ p <- p %>% filter (first_child_yob>1939 | ( is.na(first_child_yob) & kids==0 ))
 
 #  run the dredge code to predict lotta service and a seperate model to predict LRS
 # select variables
-p <- p %>% select("lotta","age","agriculture","education","brothers","sisters")
+p <- p %>% select("lotta","age","agriculture","education","brothers","sisters","never_married")
 
 p1<- p[complete.cases(p),]
 
@@ -86,6 +86,7 @@ path<- (paste0("results/"))
 filename <- "lottas_unmarried_and_childless_in_1940.rds"
 
 saveRDS(model, paste0(path, filename))
+
 
 ################################################################################################################
 ######################Model 2####################################################################
@@ -326,20 +327,22 @@ saveRDS(model, paste0(path, filename))
 # get model predictions for absolute effects for each prediction
 
 #Load the 3 models
-mod_1 <- readRDS("C:/Users/rofrly/Dropbox/Github/Lottas/Models/Model_1.rds")
-mod_2 <- readRDS("C:/Users/rofrly/Dropbox/Github/Lottas/Models/Model_2.rds")
-mod_3 <- readRDS("C:/Users/rofrly/Dropbox/Github/Lottas/Models/Model_3.rds")
+#relative path to models folder
+mod_1 <- readRDS("./Models/Model_1.rds")
+mod_2 <- readRDS("./Models/Model_2.rds")
+mod_2new <-readRDS("./Models/Model_2_new.rds")
+mod_3 <- readRDS("./Models/Model_3.rds")
 # Model 1
 attach(p1)
 lottas_1 <- tidyr::crossing(
   age = mean(age),
   #outbred = mean (outbred),# the "L" makes the value an integer, avoiding possible errors
   age = mean(age),
-  brothers = 0L,
-  sisters=mean(sisters),
+  brothers = mean(brothers),
+  sisters=4L,
   agriculture=mean(agriculture),
-  education = mean(education),
-  never_married = mean(never_married)) %>%
+  never_married=0L,
+  education = mean(education)) %>%
   as.data.frame()
 detach(p1)
 
@@ -357,25 +360,26 @@ attach(p2)
 lottas_2 <- tidyr::crossing(
   age = mean(age),
   #outbred = mean (outbred),# the "L" makes the value an integer, avoiding possible errors
-  sons = 0L,
-  daughters=0L,
+  sons = mean(sons),
+  daughters=mean(daughters),
   agriculture=mean(agriculture),
   education=mean(education),
   served=1L,
   injured=1L,
   returnedkarelia = mean(returnedkarelia),
-  never_married = mean(never_married),
+  single_in_45 = 0L,
   outbred = mean(outbred2)) %>%
   as.data.frame()
 detach(p2)
 
-link_2 <- link(mod_2, data=lottas_2)
+link_2 <- link(mod_2new, data=lottas_2)
 # get means
 mu <- apply(link_2,2,mean)
 #get PI's'
 pi <- t(apply(link_2,2, PI))
 
-
+mu
+pi
 # new changes
 ##################################
 # make one df that combines brothers, sisters, educated, agricultural, never married, single in 1939, age,

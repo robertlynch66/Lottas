@@ -3,7 +3,7 @@ husband_served_model <- readRDS("Models/Model_2.rds")
 brothers_model <- readRDS("Models/Model_1.rds")
 all_emancipated_kids <- readRDS("Models/Model_3.rds")
 #new model with smaller sample
-new_husband_served_model <- readRDS("Models/Model_2_new.rds")
+model_2_new <- readRDS("Models/Model_2_new.rds")
 
 library ("bayesplot")
 library(rethinking)
@@ -152,10 +152,10 @@ library("lsmeans")
 # convert booleans to numeric
 p$lotta<- as.numeric(p$lotta)
 #make a single in 1945 category
-p$single_in_45 <- ifelse(p$weddingyear>1945 , 1, 0)
+p$single_in_45 <- ifelse(p$weddingyear>1945 |is.na(p$spouse_id) , 1, 0)
 
 
-
+p$never_married <- ifelse(is.na(p$spouse_id),1,0)
 # replace NAs with 0's for unmarrieds in husband served and husband injured cats
 p$servedduringwar_husband<- as.numeric(p$servedduringwar_husband)
 p$servedduringwar_husband[p$never_married==1]<- 0
@@ -177,7 +177,7 @@ p <- p %>% filter (age>18)
 # select complete cases for models
 p <- p %>% select("lotta","age","sons","daughters","agriculture","returnedkarelia","outbred2",
                   "education","servedduringwar_husband","injuredinwar_husband",
-                  "single_in_45")
+                  "single_in_45","never_married")
 
 p2<- p[complete.cases(p),]
 ## Fig 3####################################
@@ -223,7 +223,7 @@ z <- unlist(rawdata_bros$lotta)
 
 rawdata_bros <- cbind(rawdata_bros,z)
 rawdata_bros$lotta <-  NULL
-rawdata_bros[1,2] <- 0.175
+
 #rawdata_bros[6,2] <- 0.2231
 data <- df_bros%>% left_join (rawdata_bros, by =c("brothers"="brothers"))
 data$sibcat <- "brothers"
@@ -275,38 +275,50 @@ data_all_sibs <- rbind(data, data2)
 ## set up color vector
 cols <- c("brothers" = "black", "sisters" = "grey")
 sibs_fig <- ggplot(data=data_all_sibs,aes(x=siblings,y=p)) +
-  stat_lineribbon(aes(group=factor(sibcat),color=factor(sibcat) ),.width = c(.8, .5)) +
-  scale_fill_brewer(name="Credibility interval")+
+  stat_lineribbon(aes(colour=factor(sibcat)),
+                      .width = c(.8, .5),show.legend = TRUE,geom="lineribbon") +
+  scale_fill_brewer(name="Model Predictions\n Credibility Intervals",
+                    palette="Greens")+
+  #scale_colour_brewer(name="Credibility interval",
+    #                palette="Greens")+
   
   geom_errorbar(position=position_dodge(width=0.3),size=0.6,width=0.3,
                 aes(group=factor(sibcat),color=factor(sibcat),
 x=siblings,ymin=(mean_lot-se_lot), ymax=(mean_lot+se_lot))) +
   
+
+  #scale_colour_brewer(name="Credibility interval",
+       #             palette="Blues")
+  
   geom_point(position=position_dodge(width=0.3),
-             alpha=1,size=1,aes(group=factor(sibcat),color=factor(sibcat),
+             alpha=1,size=2,aes(group=factor(sibcat),color=factor(sibcat) ,
       x=siblings,y=mean_lot))+
   scale_shape_identity()+
   
  
 scale_colour_manual(
-  name="siblings",
+  name="Siblings",
   values = cols,
   breaks = c("brothers", "sisters"),
-  labels = c("brothers (observed)", "sisters (observed)")
-)+
+  labels = c("brothers\n(observed) SE",
+             "sisters\n(observed) SE")
+)    +
 
   scale_x_continuous(breaks=c(0,1,2,3,4,5),labels=c("0","1","2","3", "4",
                                                                 ">5")) +
+  scale_y_continuous(limits=c(0.16,0.245),breaks=c(0.18,0.21,0.24),labels=c("18%","21%","24%")) +
   xlab("Brothers or sisters with mean\nnumber of opposite sex siblings") + ylab("Probability of volunteering") + 
-  ggtitle("Unmarried women with more brothers\nare more likely to volunteer") + 
-  theme(plot.title = element_text(hjust = 0.5, size=14,face="bold"),
+  #ggtitle("Unmarried women with more brothers\nare more likely to volunteer") + 
+  theme(plot.title = element_text(hjust = 0.5, size=10,face="bold"),
         axis.text.x = element_text(colour="grey20",size=10,angle=0,face="bold"),
         axis.text.y = element_text(colour="grey20",size=10,angle=0,hjust=0,vjust=0,face="bold"),  
-        axis.title.x = element_text(colour="black",size=12,angle=0,hjust=.5,vjust=0,face="bold"),
-        axis.title.y = element_text(colour="black",size=12,angle=90,hjust=.5,vjust=.5,face="bold"))
+        axis.title.x = element_text(colour="black",size=11,angle=0,hjust=.5,vjust=0,face="bold"),
+        legend.title=element_text(size=10), 
+        legend.text=element_text(size=10),
+        axis.title.y = element_text(colour="black",size=11,angle=90,hjust=.5,vjust=.5,face="bold"))
   sibs_fig
   
-ggsave(sibs_fig, filename = "Figure 3.png", width = 4, height = 4, device = "png", dpi = 600,units = "in")
+ggsave(sibs_fig, filename = "Figure 3.png", width = 6, height = 4, device = "png", dpi = 600,units = "in")
 #########################
 
   
@@ -392,16 +404,16 @@ fig4 <- ggplot(data = data, aes(x = factor(served), y = p, position="dodge")) +
   xlab("Husband served in war") + 
   
   scale_y_continuous(name="Probability of volunteering",labels=scaleFUN)+
-  ggtitle("Women with husbands who serve in\nthe military are more likely to volunteer") +
+  #ggtitle("Women with husbands who serve in\nthe military are more likely to volunteer") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.key.size = unit(0.5, "in")) +
-  theme(plot.title = element_text(hjust = 0.5, size=7,face="bold"),
-        axis.text.x = element_text(colour="grey20",size=5,angle=0,face="bold"),
-        axis.text.y = element_text(colour="grey20",size=5,angle=0,hjust=0,vjust=0,face="bold"),  
-        axis.title.x = element_text(colour="black",size=6,angle=0,hjust=.5,vjust=0,face="bold"),
-        axis.title.y = element_text(colour="black",size=6,angle=90,hjust=.5,vjust=.5,face="bold"))  
+  theme(plot.title = element_text(hjust = 0.5, size=10,face="bold"),
+        axis.text.x = element_text(colour="grey20",size=10,angle=0,face="bold"),
+        axis.text.y = element_text(colour="grey20",size=10,angle=0,hjust=0,vjust=0,face="bold"),  
+        axis.title.x = element_text(colour="black",size=11,angle=0,hjust=.5,vjust=0,face="bold"),
+        axis.title.y = element_text(colour="black",size=11,angle=90,hjust=.5,vjust=.5,face="bold"))  
 
 
 
